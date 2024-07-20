@@ -26,29 +26,30 @@ import numpy as np
 
 # ####################################################################
 def eliminacion_gaussiana(A: np.ndarray) -> np.ndarray:
-    """Resuelve un sistema de ecuaciones lineales mediante el método de eliminación gaussiana.
+    """Descompone una matriz cuadrada A mediante el método de eliminación gaussiana.
 
     ## Parameters
 
-    ``A``: matriz aumentada del sistema de ecuaciones lineales. Debe ser de tamaño n-by-(n+1), donde n es el número de incógnitas.
+    ``A``: matriz cuadrada del sistema de ecuaciones lineales. Debe ser de tamaño n-by-n.
 
     ## Return
 
-    ``solucion``: vector con la solución del sistema de ecuaciones lineales.
-
+    ``U``: matriz triangular superior obtenida tras la eliminación gaussiana.
     """
     if not isinstance(A, np.ndarray):
         logging.debug("Convirtiendo A a numpy array.")
         A = np.array(A)
-    assert A.shape[0] == A.shape[1] - 1, "La matriz A debe ser de tamaño n-by-(n+1)."
+    assert A.shape[0] == A.shape[1], "La matriz A debe ser cuadrada."
     n = A.shape[0]
+
+    U = A.copy()
 
     for i in range(0, n - 1):  # loop por columna
 
         # --- encontrar pivote
         p = None  # default, first element
         for pi in range(i, n):
-            if A[pi, i] == 0:
+            if U[pi, i] == 0:
                 # must be nonzero
                 continue
 
@@ -57,7 +58,7 @@ def eliminacion_gaussiana(A: np.ndarray) -> np.ndarray:
                 p = pi
                 continue
 
-            if abs(A[pi, i]) < abs(A[p, i]):
+            if abs(U[pi, i]) < abs(U[p, i]):
                 p = pi
 
         if p is None:
@@ -67,32 +68,45 @@ def eliminacion_gaussiana(A: np.ndarray) -> np.ndarray:
         if p != i:
             # swap rows
             logging.debug(f"Intercambiando filas {i} y {p}")
-            _aux = A[i, :].copy()
-            A[i, :] = A[p, :].copy()
-            A[p, :] = _aux
+            _aux = U[i, :].copy()
+            U[i, :] = U[p, :].copy()
+            U[p, :] = _aux
 
         # --- Eliminación: loop por fila
         for j in range(i + 1, n):
-            m = A[j, i] / A[i, i]
-            A[j, i:] = A[j, i:] - m * A[i, i:]
+            m = U[j, i] / U[i, i]
+            U[j, i:] = U[j, i:] - m * U[i, i:]
 
-        logging.info(f"\n{A}")
+        logging.info(f"\n{U}")
 
-    if A[n - 1, n - 1] == 0:
+    if U[n - 1, n - 1] == 0:
         raise ValueError("No existe solución única.")
 
-        print(f"\n{A}")
-    # --- Sustitución hacia atrás
+    return U
+
+def resolver_sistema(U: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Resuelve un sistema de ecuaciones lineales usando sustitución hacia atrás con la matriz U triangular superior.
+
+    ## Parameters
+
+    ``U``: matriz triangular superior del sistema de ecuaciones lineales.
+    ``b``: vector de términos constantes.
+
+    ## Return
+
+    ``solucion``: vector con la solución del sistema de ecuaciones lineales.
+    """
+    n = U.shape[0]
     solucion = np.zeros(n)
-    solucion[n - 1] = A[n - 1, n] / A[n - 1, n - 1]
+    solucion[n - 1] = b[n - 1] / U[n - 1, n - 1]
 
     for i in range(n - 2, -1, -1):
         suma = 0
         for j in range(i + 1, n):
-            suma += A[i, j] * solucion[j]
-        solucion[i] = (A[i, n] - suma) / A[i, i]
+            suma += U[i, j] * solucion[j]
+        solucion[i] = (b[i] - suma) / U[i, i]
 
-    return solucion
+    return A
 
 
 # ####################################################################
